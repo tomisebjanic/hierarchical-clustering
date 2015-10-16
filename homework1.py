@@ -1,107 +1,81 @@
 import csv
+from itertools import combinations
 import sys
+
 
 __author__ = 'tomisebjanic'
 
 
-def klaster():
-    with open('eurovision-final.csv') as csvfile:
-        csv_reader = csv.reader(csvfile)
-        raw_data = [[row[i].strip().lower() for i in range(0, len(row))] for row in csv_reader]
+class HierarchicalClustering:
 
-    data_range = range(raw_data[0].index('albania'), raw_data[0].index('united kingdom'))
-    data = [[raw_data[i][j] if i > 0 else [raw_data[i][j]] for j in data_range] for i in range(0, len(raw_data))]
+    def __init__(self, file, linkage, distance):
+        with open(file, encoding="latin1", errors='ignore') as csvfile:
+            csv_reader = csv.reader(csvfile)
+            raw_data = [[row[i].strip().lower() for i in range(0, len(row))] for row in csv_reader]
+        data_range = range(raw_data[0].index('albania'), raw_data[0].index('united kingdom') + 1)
 
-    while(len(data[0])) > 1:
-        min_manhattan = sys.maxsize
-        column1, column2, column1_index, column2_index, min_avg_distances = None, None, None, None, []
+        self.data = [[float(raw_data[i][j]) if raw_data[i][j] != '' else '' for j in data_range] for i in range(1, len(raw_data))]
+        self.clusters = [[raw_data[0][j]] for j in data_range]
+        self.linkage = linkage
+        self.distance_method = distance
+        self.data = [list(i) for i in zip(*self.data)]  # transpose data matrix
 
-        # Iteratively compare two columns
-        for j in range(0, len(data[0]) - 1):
-            for j2 in range(j+1, len(data[0])):
-                distance, num_comparisons, average_distances = 0, 0, []
+    def euclidean_distance(self, row1, row2):
+        # :returns float
+        distance = [(x-y)**2 for x, y in zip(self.data[row1], self.data[row2]) if x != '' and y != '']
+        return sum(distance)**0.5 / len(distance) if len(distance) != 0 else None
 
-                # Calculate distance between columns
-                for i in range(1, len(data)):
-                    if data[i][j] != '' and data[i][j2] != '':
-                        distance += abs(int(data[i][j]) - int(data[i][j2]))
-                        average_distances.append((int(data[i][j]) + int(data[i][j2])) / 2)
-                        num_comparisons += 1
-                    else:
-                        if data[i][j] != '':
-                            average_distances.append(int(data[i][j]))
-                        elif data[i][j2] != '':
-                            average_distances.append(int(data[i][j2]))
-                        else:
-                            average_distances.append('')
+    def manhattan_distance(self, row1, row2):
+        # :returns float
+        distance = [abs(x-y) for x, y in zip(self.data[row1], self.data[row2]) if x != '' and y != '']
+        return sum(distance) / len(distance) if len(distance) != 0 else None
 
-                # Assign closest columns
-                if 0 < num_comparisons and min_manhattan > distance/num_comparisons:
-                    min_manhattan, column1, column2, column1_index, column2_index, min_avg_distances = distance/num_comparisons, data[0][j], data[0][j2], j, j2, average_distances
+    def cluster_distances(self, cl1, cl2):
+        """Distances between merged clusters."""
+        return self.min_linkage(cl1, cl2) if self.linkage == 'min' else self.max_linkage(cl1, cl2) if self.linkage == 'max' else self.avg_linkage(cl1, cl2)
 
-        # No more columns to compare
-        if column1_index is None or column2_index is None:
-            break
+    def closest_clusters(self):
+        return min((self.cluster_distances(*c), c) for c in combinations(self.clusters, 2))
 
-        # Merge columns
-        data[0][column1_index] = [data[0][column1_index], data[0][column2_index]]
-        del data[0][column2_index]
+    def min_linkage(self, row1, row2):
+        # :returns list
+        return [min(self.data[row1][j], self.data[row2][j]) if self.data[row1][j] != '' and self.data[row2][j] != '' else self.data[row1][j] if self.data[row1][j] != '' else self.data[row2][j] if self.data[row2][j] != '' else '' for j in range(len(self.data[row1]))]
 
-        for i in range(1, len(data)):
-            data[i][column1_index] = min_avg_distances[i-1]
-            del data[i][column2_index]
+    def max_linkage(self, row1, row2):
+        # :returns list
+        return [max(self.data[row1][j], self.data[row2][j]) if self.data[row1][j] != '' and self.data[row2][j] != '' else self.data[row1][j] if self.data[row1][j] != '' else self.data[row2][j] if self.data[row2][j] != '' else '' for j in range(len(self.data[row1]))]
 
-    return data[0][0]
+    def avg_linkage(self, row1, row2):
+        # :returns list
+        return [(self.data[row1][j] + self.data[row2][j])/2 if self.data[row1][j] != '' and self.data[row2][j] != '' else self.data[row1][j] if self.data[row1][j] != '' else self.data[row2][j] if self.data[row2][j] != '' else '' for j in range(len(self.data[row1]))]
 
+    def do_clustering(self):
+        while len(self.clusters) > 1:
+            cluster1, cluster2, min_distance = None, None, sys.maxsize  # get two closest clusters
+            for c in combinations(range(len(self.clusters)-1), 2):
+                curr_dist = self.euclidean_distance(c[0], c[1]) if self.distance_method == 'euc' else self.manhattan_distance(c[0], c[1])
+                if curr_dist is not None and curr_dist < min_distance:
+                    cluster1, cluster2, min_distance = c[0], c[1], curr_dist
 
-def printDendrogram(T, sep=3):
-    """Print dendrogram of a binary tree.  Each tree node is represented by a length-2 tuple."""
+            if cluster1 is None and cluster2 is None:
+                break
 
-    def isPair(T):
-        return type(T) == list and len(T) == 2
-
-    def maxHeight(T):
-        if isPair(T):
-            h = max(maxHeight(T[0]), maxHeight(T[1]))
-        else:
-            h = len(str(T))
-        return h + sep
-
-    activeLevels = {}
-
-    def traverse(T, h, isFirst):
-        if isPair(T):
-            traverse(T[0], h-sep, 1)
-            s = [' ']*(h-sep)
-            s.append('|')
-        else:
-            s = list(str(T))
-            s.append(' ')
-
-        while len(s) < h:
-            s.append('-')
-
-        if (isFirst >= 0):
-            s.append('+')
-            if isFirst:
-                activeLevels[h] = 1
+            print("merged\t", self.clusters[cluster1], self.clusters[cluster2])
+            new_dist = self.cluster_distances(cluster1, cluster2)   # calculate new distance
+            self.clusters.append([self.clusters[cluster1], self.clusters[cluster2]])    # append new cluster and delete old ones
+            self.data.append(new_dist)
+            if cluster1 < cluster2:
+                del self.clusters[cluster1]
+                del self.clusters[cluster2-1]
+                del self.data[cluster1]
+                del self.data[cluster2-1]
             else:
-                del activeLevels[h]
-
-        A = list(activeLevels)
-        A.sort()
-        for L in A:
-            if len(s) < L:
-                while len(s) < L:
-                    s.append(' ')
-                s.append('|')
-
-        print (''.join(s))
-
-        if isPair(T):
-            traverse(T[1], h-sep, 0)
-
-    traverse(T, maxHeight(T), -1)
+                del self.clusters[cluster2]
+                del self.clusters[cluster1-1]
+                del self.data[cluster2]
+                del self.data[cluster1-1]
 
 
-printDendrogram(klaster())
+
+hc = HierarchicalClustering('eurovision-final.csv', 'avg', 'man')
+hc.do_clustering()
