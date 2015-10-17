@@ -1,7 +1,6 @@
 import csv
 from itertools import combinations
 import sys
-from tkinter import *
 
 
 __author__ = 'tomisebjanic'
@@ -20,7 +19,7 @@ class HierarchicalClustering:
         self.linkage = linkage
         self.distance_method = distance
         self.data = [list(i) for i in zip(*self.data)]  # transpose data matrix
-        self.print_separator = 5
+        self.print_separator = 10
         self.active_levels = {}
 
     def euclidean_distance(self, row1, row2):
@@ -69,39 +68,34 @@ class HierarchicalClustering:
                 del self.data[cluster2]
                 del self.data[cluster1-1]
 
-        # return self.clusters
-        self.print_dendrogram(self.clusters, self.max_height(self.clusters), -1)
+        return self.clusters
 
     def max_height(self, tree):
         return max(self.max_height(tree[0]), self.max_height(tree[1])) + self.print_separator if len(tree) == 2 else self.print_separator + len(str(tree))
 
-    def print_dendrogram(self, tree, height, node_position):
-        # if len(tree) == 2:
-        #     self.print_dendrogram(tree[0], height-self.print_separator, 1)
-        #     line = [' ']*(height-self.print_separator) + ['|']
-        #     while len(line) < height:
-        #         line.append('-')
-        #     print(''.join(line))
-        #     self.print_dendrogram(tree[1], height-self.print_separator, -1)
-        # else:
-        #     line = list(str(tree[0])) + [' ']
-        #     while len(line) < height:
-        #         line.append('-')
-        #     print(''.join(line))
-
-        if len(tree) == 1:
-            line = list(str(tree[0])) + [' ']
-            while len(line) < height:
-                line.append('-')
-            print(''.join(line))
+    def print_dendrogram(self, tree, height):
+        if len(tree) <= 1:
+            print(''.join(list(str(tree[0]).upper()) + [' '] + ['=']*(height-len(tree[0])-1) + ['*']))
         else:
-            self.print_dendrogram(tree[0], height-self.print_separator, 1)
-            line = [' ']*(height-self.print_separator) + ['|']
-            while len(line) < height:
-                line.append('-')
-            print(''.join(line))
-            self.print_dendrogram(tree[1], height-self.print_separator, -1)
+            self.print_dendrogram(tree[0], height-self.print_separator)
+            print(''.join([' ']*(height-self.print_separator) + ['ll'] + ['=']*(height-(height-self.print_separator+1)) +['*']))
+            self.print_dendrogram(tree[1], height-self.print_separator)
 
+    def main(self):
+        clusters = self.do_clustering()
+        self.print_dendrogram(clusters, self.max_height(self.clusters))
+
+""" Uncomment one of the following constructors """
+# hc = HierarchicalClustering('eurovision-final.csv', 'min', 'euc')
+# hc = HierarchicalClustering('eurovision-final.csv', 'min', 'man')
+# hc = HierarchicalClustering('eurovision-final.csv', 'avg', 'euc')
 hc = HierarchicalClustering('eurovision-final.csv', 'avg', 'man') # najlepsi
-# hc = HierarchicalClustering('eurovision-final.csv', 'max', 'man') tude fajn
-hc.do_clustering()
+# hc = HierarchicalClustering('eurovision-final.csv', 'max', 'euc')
+# hc = HierarchicalClustering('eurovision-final.csv', 'max', 'man') # tude fajn
+# hc = HierarchicalClustering('eurovision-semifinal.csv', 'min', 'euc')
+# hc = HierarchicalClustering('eurovision-semifinal.csv', 'min', 'man')
+# hc = HierarchicalClustering('eurovision-semifinal.csv', 'avg', 'euc')
+# hc = HierarchicalClustering('eurovision-semifinal.csv', 'avg', 'man')
+# hc = HierarchicalClustering('eurovision-semifinal.csv', 'max', 'euc')
+# hc = HierarchicalClustering('eurovision-semifinal.csv', 'max', 'man')
+hc.main()
