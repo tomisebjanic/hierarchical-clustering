@@ -1,6 +1,7 @@
 import csv
 from itertools import combinations
 import sys
+from tkinter import *
 
 
 __author__ = 'tomisebjanic'
@@ -19,34 +20,27 @@ class HierarchicalClustering:
         self.linkage = linkage
         self.distance_method = distance
         self.data = [list(i) for i in zip(*self.data)]  # transpose data matrix
+        self.print_separator = 5
+        self.active_levels = {}
 
     def euclidean_distance(self, row1, row2):
-        # :returns float
         distance = [(x-y)**2 for x, y in zip(self.data[row1], self.data[row2]) if x != '' and y != '']
         return sum(distance)**0.5 / len(distance) if len(distance) != 0 else None
 
     def manhattan_distance(self, row1, row2):
-        # :returns float
         distance = [abs(x-y) for x, y in zip(self.data[row1], self.data[row2]) if x != '' and y != '']
         return sum(distance) / len(distance) if len(distance) != 0 else None
 
     def cluster_distances(self, cl1, cl2):
-        """Distances between merged clusters."""
-        return self.min_linkage(cl1, cl2) if self.linkage == 'min' else self.max_linkage(cl1, cl2) if self.linkage == 'max' else self.avg_linkage(cl1, cl2)
+        return self.single_linkage(cl1, cl2) if self.linkage == 'min' else self.complete_linkage(cl1, cl2) if self.linkage == 'max' else self.average_linkage(cl1, cl2)
 
-    def closest_clusters(self):
-        return min((self.cluster_distances(*c), c) for c in combinations(self.clusters, 2))
-
-    def min_linkage(self, row1, row2):
-        # :returns list
+    def single_linkage(self, row1, row2):
         return [min(self.data[row1][j], self.data[row2][j]) if self.data[row1][j] != '' and self.data[row2][j] != '' else self.data[row1][j] if self.data[row1][j] != '' else self.data[row2][j] if self.data[row2][j] != '' else '' for j in range(len(self.data[row1]))]
 
-    def max_linkage(self, row1, row2):
-        # :returns list
+    def complete_linkage(self, row1, row2):
         return [max(self.data[row1][j], self.data[row2][j]) if self.data[row1][j] != '' and self.data[row2][j] != '' else self.data[row1][j] if self.data[row1][j] != '' else self.data[row2][j] if self.data[row2][j] != '' else '' for j in range(len(self.data[row1]))]
 
-    def avg_linkage(self, row1, row2):
-        # :returns list
+    def average_linkage(self, row1, row2):
         return [(self.data[row1][j] + self.data[row2][j])/2 if self.data[row1][j] != '' and self.data[row2][j] != '' else self.data[row1][j] if self.data[row1][j] != '' else self.data[row2][j] if self.data[row2][j] != '' else '' for j in range(len(self.data[row1]))]
 
     def do_clustering(self):
@@ -57,10 +51,10 @@ class HierarchicalClustering:
                 if curr_dist is not None and curr_dist < min_distance:
                     cluster1, cluster2, min_distance = c[0], c[1], curr_dist
 
-            if cluster1 is None and cluster2 is None:
+            if cluster1 is None and cluster2 is None:   # there is only one cluster remaining --> stop the loop
                 break
 
-            print("merged\t", self.clusters[cluster1], self.clusters[cluster2])
+            # print("merged\t", self.clusters[cluster1], self.clusters[cluster2])
             new_dist = self.cluster_distances(cluster1, cluster2)   # calculate new distance
             self.clusters.append([self.clusters[cluster1], self.clusters[cluster2]])    # append new cluster and delete old ones
             self.data.append(new_dist)
@@ -75,7 +69,39 @@ class HierarchicalClustering:
                 del self.data[cluster2]
                 del self.data[cluster1-1]
 
+        # return self.clusters
+        self.print_dendrogram(self.clusters, self.max_height(self.clusters), -1)
 
+    def max_height(self, tree):
+        return max(self.max_height(tree[0]), self.max_height(tree[1])) + self.print_separator if len(tree) == 2 else self.print_separator + len(str(tree))
 
-hc = HierarchicalClustering('eurovision-final.csv', 'avg', 'man')
+    def print_dendrogram(self, tree, height, node_position):
+        # if len(tree) == 2:
+        #     self.print_dendrogram(tree[0], height-self.print_separator, 1)
+        #     line = [' ']*(height-self.print_separator) + ['|']
+        #     while len(line) < height:
+        #         line.append('-')
+        #     print(''.join(line))
+        #     self.print_dendrogram(tree[1], height-self.print_separator, -1)
+        # else:
+        #     line = list(str(tree[0])) + [' ']
+        #     while len(line) < height:
+        #         line.append('-')
+        #     print(''.join(line))
+
+        if len(tree) == 1:
+            line = list(str(tree[0])) + [' ']
+            while len(line) < height:
+                line.append('-')
+            print(''.join(line))
+        else:
+            self.print_dendrogram(tree[0], height-self.print_separator, 1)
+            line = [' ']*(height-self.print_separator) + ['|']
+            while len(line) < height:
+                line.append('-')
+            print(''.join(line))
+            self.print_dendrogram(tree[1], height-self.print_separator, -1)
+
+hc = HierarchicalClustering('eurovision-final.csv', 'avg', 'man') # najlepsi
+# hc = HierarchicalClustering('eurovision-final.csv', 'max', 'man') tude fajn
 hc.do_clustering()
