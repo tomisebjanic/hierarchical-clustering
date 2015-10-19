@@ -19,7 +19,7 @@ class HierarchicalClustering:
         self.linkage = linkage
         self.distance_method = distance
         self.data = [list(i) for i in zip(*self.data)]  # transpose data matrix
-        self.print_separator = 10
+        self.print_separator = 7
         self.active_levels = {}
 
     def euclidean_distance(self, row1, row2):
@@ -75,10 +75,10 @@ class HierarchicalClustering:
 
     def print_dendrogram(self, tree, height):
         if len(tree) <= 1:
-            print(''.join(list(str(tree[0]).upper()) + [' '] + ['=']*(height-len(tree[0])-1) + ['*']))
+            print(''.join(list(str(tree[0]).upper()) + [' '] + ['-']*(height-len(tree[0])-1) + ['+']))
         else:
             self.print_dendrogram(tree[0], height-self.print_separator)
-            print(''.join([' ']*(height-self.print_separator) + ['ll'] + ['=']*(height-(height-self.print_separator+1)) +['*']))
+            print(''.join([' ']*(height-self.print_separator) + ['|'] + ['-']*(height-(height-self.print_separator+1)) +['+']))
             self.print_dendrogram(tree[1], height-self.print_separator)
 
     def main(self):
@@ -89,13 +89,7 @@ class HierarchicalClustering:
 # hc = HierarchicalClustering('eurovision-final.csv', 'min', 'euc')
 # hc = HierarchicalClustering('eurovision-final.csv', 'min', 'man')
 # hc = HierarchicalClustering('eurovision-final.csv', 'avg', 'euc')
-hc = HierarchicalClustering('eurovision-final.csv', 'avg', 'man') # najlepsi
+# hc = HierarchicalClustering('eurovision-final.csv', 'avg', 'man')
 # hc = HierarchicalClustering('eurovision-final.csv', 'max', 'euc')
-# hc = HierarchicalClustering('eurovision-final.csv', 'max', 'man') # tude fajn
-# hc = HierarchicalClustering('eurovision-semifinal.csv', 'min', 'euc')
-# hc = HierarchicalClustering('eurovision-semifinal.csv', 'min', 'man')
-# hc = HierarchicalClustering('eurovision-semifinal.csv', 'avg', 'euc')
-# hc = HierarchicalClustering('eurovision-semifinal.csv', 'avg', 'man')
-# hc = HierarchicalClustering('eurovision-semifinal.csv', 'max', 'euc')
-# hc = HierarchicalClustering('eurovision-semifinal.csv', 'max', 'man')
+hc = HierarchicalClustering('eurovision-final.csv', 'max', 'man')
 hc.main()
